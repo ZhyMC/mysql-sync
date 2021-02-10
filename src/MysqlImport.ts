@@ -38,12 +38,18 @@ export async function MySqlImport(option : Option){
     .replace('{database}',option.database)
     .replace('{file}',option.sqlfile)
 
-    let stdout = await new Promise<string>((resolve,reject)=>child_process.exec(cmd,(err,stdout,stderr)=>{
-        if(err){
-            reject(err);
-            return;
-        }
-        resolve(stdout);
-    }));
-    return stdout;
+    try{
+        await new Promise<string>((resolve,reject)=>child_process.exec(cmd,(err,stdout,stderr)=>{
+            if(err){
+                reject(err);
+                return;
+            }
+            resolve(stdout);
+        }));
+        return;
+    }catch(err){
+        throw err;
+    }finally{
+        conn.destroy();
+    }
 }

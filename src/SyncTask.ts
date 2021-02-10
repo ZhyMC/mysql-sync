@@ -66,6 +66,7 @@ export const DefaultTaskOption: TaskOption = {
 export class SyncTask extends EventEmitter{
     private tunnel? : net.Server;
     private option : TaskOption;
+    private sqlfile : string;
 
     private local_host? : string;
     private local_port? : number;
@@ -76,17 +77,23 @@ export class SyncTask extends EventEmitter{
     constructor(option : TaskOption,logger : Logger){
         super();
         this.option = option;
+        this.sqlfile = Path.join(this.option.working_dir, "dump.sql");
+        
         this.logger = logger;
         this.state = "unready"
 
-        this.on("done",(err)=>{
-            if(err){
-                this.logger.error(`任务以错误的方式结束 ${err}`);
-                return;
-            }
-            this.logger.info(`任务已经完成`);
-        })
+        this.on("done",this.onTaskDone.bind(this))
         this.init();
+    }
+    async onTaskDone(err?:Error){
+        this.tunnel?.close();
+        if(await fs.pathExists(this.sqlfile)) await fs.remove(this.sqlfile);
+    
+        if(err){
+            this.logger.error(`任务以错误的方式结束 ${err}`);
+            return;
+        }
+        this.logger.info(`任务已经完成`);
     }
     async start(){
         if(this.state != "ready")
@@ -111,9 +118,8 @@ export class SyncTask extends EventEmitter{
     }
     private async doTask(){
 
-        let sqlfile = Path.join(this.option.working_dir,"dump.sql");
         
-        if(await fs.pathExists(sqlfile)) await fs.remove(sqlfile);
+        if(await fs.pathExists(this.sqlfile)) await fs.remove(this.sqlfile);
 
         this.logger.info(`开始从远程数据库导出 SQL 文件`);
 
@@ -125,11 +131,11 @@ export class SyncTask extends EventEmitter{
                 password:this.option.dst_mysql.pass,
                 database:this.option.dst_mysql.db
             },
-            dumpToFile:sqlfile
+            dumpToFile:this.sqlfile
         });
-        this.logger.info(`已导出至 ${sqlfile}`);
+        this.logger.info(`已导出至 ${this.sqlfile}`);
 
-        this.logger.info(`开始从 ${sqlfile} 导入到本地数据库...`);
+        this.logger.info(`开始从 ${this.sqlfile} 导入到本地数据库...`);
 
         this.logger.info(`这可能使用很久时间, 请等待...`);
         await MySqlImport({
@@ -138,12 +144,9 @@ export class SyncTask extends EventEmitter{
             user:this.option.local_mysql.user,
             password:this.option.local_mysql.pass,
             database:this.option.dst_mysql.db,
-            sqlfile
+            sqlfile:this.sqlfile
         });
         this.logger.info(`导入至本地数据库完毕`);
-
-        if(await fs.pathExists(sqlfile)) await fs.remove(sqlfile);
-        this.tunnel?.close();
 
     }
     private async init(){
