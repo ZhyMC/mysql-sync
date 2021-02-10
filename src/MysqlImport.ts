@@ -28,8 +28,8 @@ export async function MySqlImport(option : Option){
     let exec =  Path.join(result[0].Value,"./bin","./mysql");
     let template = 
     process.platform == "win32" ? 
-    `"{executable}" -u{username} -p{password} {database} < {file}`:
-    `{executable} -u{username} -p{password} {database} < {file}`;
+    `"{executable}" -u{username} -p{password} --default-character-set=utf8 {database} < {file}`:
+    `{executable} -u{username} -p{password} --default-character-set=utf8 {database} < {file}`;
 
     let cmd = template
     .replace('{executable}',exec)
