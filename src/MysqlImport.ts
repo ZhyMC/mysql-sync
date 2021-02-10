@@ -45,6 +45,5 @@ export async function MySqlImport(option : Option){
         }
         resolve(stdout);
     }));
-    console.log(stdout);
     return stdout;
 }
