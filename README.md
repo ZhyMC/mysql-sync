@@ -46,6 +46,7 @@ node ../bin/cli --init
     "user": "root",
     "pass": "sqlpass"
   }
+}
 ```
 
 然后直接运行命令
